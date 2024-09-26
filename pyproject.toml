@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "dataclass-big2"
+version = "0.1.0"
+description = ""
+authors = ["Kavan <kavandevelopment@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.6.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
