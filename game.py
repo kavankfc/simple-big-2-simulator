@@ -200,5 +200,4 @@ class SimpleBig2:
 if __name__ == "__main__":
     players = [Player("Adam"), Player("Ben"), Player("Charlie"), Player("Derek")]
     game = SimpleBig2(players)
-    game.setup()
-    game.play()
+    game.setup().play()
