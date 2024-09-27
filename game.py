@@ -51,7 +51,7 @@ class Deck:
 
     def draw(self, number: int = 1) -> list[Card]:
         if number > len(self.cards):
-            raise ValueError("Cannot draw more cards than are in the deck.")
+            raise ValueError(f"Cannot draw more cards than are in the deck, {number=}, {len(self.cards)=}")
         drawn_cards = self.cards[:number]
         self.cards = self.cards[number:]
         return drawn_cards
@@ -77,7 +77,7 @@ class Player:
     def __repr__(self) -> str:
         return self.name
 
-    def dealt(self, deck: Deck):
+    def dealt(self, deck: Deck) -> None:
         self.deck = deck
 
     def play(self, last_played_card: Card | None) -> Card | None:
@@ -86,9 +86,10 @@ class Player:
         return self.deck.draw_smallest(last_played_card.sort_index)
 
     def has_card(self) -> bool:
-        if self.deck is None:
-            return False
-        return len(self.deck) > 0
+        return len(self.deck) > 0 if self.deck is not None else False
+    
+    def discard_all_cards(self) -> None:
+        self.deck = None
 
 
 class SimpleBig2:
@@ -100,8 +101,8 @@ class SimpleBig2:
 
     def __init__(self, players: list[Player]):
         self.poker: Deck = Deck()
-        self.last_played_card: Card | None = None
         self.players = players
+        self.last_played_card: Card | None = None
         self.last_played_player: Player | None = None
 
     def deal_cards(self) -> Self:
@@ -149,6 +150,13 @@ class SimpleBig2:
         self.deal_cards()
         starting_player = self.determine_starting_player()
         self.rotate_players(starting_player=starting_player)
+        return self
+    
+    def reset(self) -> Self:
+        self.poker = Deck()
+        for player in players:
+            player.discard_all_cards()
+        self.setup()
         return self
 
     def play(self) -> None:
