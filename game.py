@@ -26,7 +26,7 @@ class Card:
         self.sort_index = RANKS.index(self.rank) * len(SUITS) + SUITS.index(self.suit)
 
     def __str__(self):
-        return f"{self.suit}{self.rank}"
+        return f"{self.rank}{self.suit}"
 
 
 class Deck:
@@ -50,29 +50,44 @@ class Deck:
         return self
 
     def draw(self, number: int = 1) -> list[Card]:
+        """
+        Draw the first n number of card from the deck.
+        """
         if number > len(self.cards):
             raise ValueError(f"Cannot draw more cards than are in the deck, {number=}, {len(self.cards)=}")
         drawn_cards = self.cards[:number]
         self.cards = self.cards[number:]
         return drawn_cards
 
-    def draw_smallest(self, card_index: int) -> Card | None:
-        # Find the smallest card with a sort_index greater than card_index
+    def get_smallest_card(self, card_index: int = 0) -> Card | None:
+        """
+        Find the smallest card with a sort_index greater than card_index.
+        Default card_index is 0, so the smallest card would be the smallest in the deck.
+        """
         for card in sorted(self.cards, key=lambda c: c.sort_index):
             if card.sort_index > card_index:
-                self.cards.remove(card)
                 return card
         return None
+    
+    def play(self, card: Card) -> Card:
+        if card not in self.cards:
+            raise ValueError(f'{card=} not found in the deck.')
+        self.cards.remove(card)
+        return card
+
+    @property
+    def count(self) -> int:
+        return len(self.cards)
 
     @staticmethod
-    def make_french_deck() -> Self:
+    def make_french_deck() -> "Deck":
         return Deck([Card(r, s) for s in SUITS for r in RANKS])
 
 
 class Player:
     def __init__(self, name: str):
         self.name = name
-        self.deck = None
+        self.deck: Deck | None= None
 
     def __repr__(self) -> str:
         return self.name
@@ -83,8 +98,13 @@ class Player:
     def play(self, last_played_card: Card | None) -> Card | None:
         if self.deck is None:
             raise ValueError("Player's deck should not be empty")
-        return self.deck.draw_smallest(last_played_card.sort_index)
-
+        card_index = 0 if last_played_card is None else last_played_card.sort_index
+        smallest_playable_card = self.deck.get_smallest_card(card_index)
+        if smallest_playable_card is None:
+            print(f'{self.name} pass this turn')
+            return None
+        return self.deck.play(smallest_playable_card)
+    
     def has_card(self) -> bool:
         return len(self.deck) > 0 if self.deck is not None else False
     
@@ -122,18 +142,11 @@ class SimpleBig2:
 
         for player in self.players:
             # Assuming each player has a 'hand' attribute which is a Deck of cards
-            player_smallest_card = min(
-                player.deck.cards, key=lambda card: card.sort_index
-            )
-
+            player_smallest_card = player.deck.get_smallest_card()
             # Compare to find the absolute smallest card across all players
-            if (
-                smallest_card is None
-                or player_smallest_card.sort_index < smallest_card.sort_index
-            ):
+            if smallest_card is None or player_smallest_card < smallest_card:
                 smallest_card = player_smallest_card
                 starting_player = player
-
         return starting_player
 
     def rotate_players(self, starting_player: Player) -> None:
@@ -154,12 +167,25 @@ class SimpleBig2:
     
     def reset(self) -> Self:
         self.poker = Deck()
-        for player in players:
+        self.last_played_card = None
+        self.last_played_player = None
+        for player in self.players:
             player.discard_all_cards()
-        self.setup()
-        return self
+        return self.setup()
+    
+    def reset_last_played_card_if_all_players_passed(self, player: Player) -> None:
+        if player == self.last_played_player:
+            self.last_played_card = None
 
-    def play(self) -> None:
+    def next_turn(self, player: Player) -> None:
+        self.reset_last_played_card_if_all_players_passed(player)
+        played_card = player.play(self.last_played_card)
+        if played_card is not None:
+            self.last_played_card = played_card
+            self.last_played_player = player
+            print(f"{player.name} played {played_card}")
+
+    def start(self) -> None:
         """
         Main game logic for playing a round of SimpleBig2.
         Each player draws the smallest card that is larger than the last played card.
@@ -169,43 +195,13 @@ class SimpleBig2:
         while all(
             player.has_card() for player in self.players
         ):  # Continue while players have cards
-            played_this_round = False
-
             for player in self.players:
-                # Determine the card to play
-                if player == self.last_played_player:
-                    # If the current player was the last to play, they play their smallest card
-                    card_to_play = player.deck.draw_smallest(-1)
-                else:
-                    # Otherwise, they play the smallest card larger than last played card
-                    card_to_play = (
-                        player.deck.draw_smallest(self.last_played_card.sort_index)
-                        if self.last_played_card
-                        else player.deck.draw_smallest(-1)
-                    )
-
-                if card_to_play:
-                    self.last_played_card = card_to_play
-                    self.last_played_player = player
-                    print(f"{player} played {card_to_play}")
-                    played_this_round = True
-                else:
-                    print(f"{player} cannot play a card this round.")
-
-            # Check if no player could play a card this round
-            if not played_this_round:
-                print(
-                    "No player could play a card this round. Resetting last played card."
-                )
-                self.last_played_card = None
-                self.last_played_player = None
-
+                self.next_turn(player)
         winner = [player for player in self.players if not player.has_card()][0]
-
         print(f"Game over! The winner is {winner.name}")
 
 
 if __name__ == "__main__":
     players = [Player("Adam"), Player("Ben"), Player("Charlie"), Player("Derek")]
     game = SimpleBig2(players)
-    game.setup().play()
+    game.setup().start()
