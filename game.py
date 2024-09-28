@@ -200,6 +200,14 @@ class SimpleBig2:
         winner = [player for player in self.players if not player.has_card()][0]
         print(f"Game over! The winner is {winner.name}")
 
+    def get_game_state(self):
+        # Return a dictionary representation of the game state
+        return {
+            'message': f"{self.last_played_player.name} win!" if self.last_played_player else "Game started!",
+            'players': [{'name': player.name, 'cards': [str(card) for card in player.deck.cards]} for player in self.players],
+            'lastPlayedCard': str(self.last_played_card) if self.last_played_card else None,
+        }
+
 
 if __name__ == "__main__":
     players = [Player("Adam"), Player("Ben"), Player("Charlie"), Player("Derek")]
